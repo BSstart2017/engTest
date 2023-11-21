@@ -1,113 +1,198 @@
-import Image from 'next/image'
+'use client'
 
-export default function Home() {
+import React, {useEffect, useState} from 'react';
+import {Button, Container, Heading, HStack, Input, Select, Text, Textarea, VStack} from "@chakra-ui/react";
+import {vocabulary, VocabularyType} from "@/app/const";
+import Timer from "@/components/Timer";
+
+enum LanguageEnum {
+  'ru' = 'ru',
+  'en' = 'en'
+}
+export default function LanguageQuiz() {
+  const [answer, setAnswer] = useState('');
+  const [result, setResult] = useState(0);
+  const [language, setLanguage] = useState<LanguageEnum>(LanguageEnum.ru);
+  const [selectVocabulary, setSelectVocabulary] = useState(Object.keys(vocabulary)?.[0]);
+  const [actualQuestions, setActualQuestions] = useState('')
+  const [isStart, setIsStart] = useState(false)
+  const [indexWord, setIndexWord] = useState<null | number>(null)
+  const [questions, setQuestions] = useState<string[]>([])
+  const [answers, setAnswers] = useState<string[]>([])
+  const [lastWord, setLastWord] = useState(0)
+  const [arrayGenerated, setArrayGenerated] = useState<number[]>([])
+  const [errorWord, setErrorWord] = useState<VocabularyType[]>([])
+  
+  const getRandomNumber = (maxValue:number, arrayGenerated:number[] = []) => {
+    const availableNumbers = Array.from({ length: maxValue }, (_, index) => index);
+    const unusedNumbers = availableNumbers.filter((num) => !arrayGenerated.includes(num));
+    
+    if (unusedNumbers.length === 0) {
+      return null;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * unusedNumbers.length);
+    return unusedNumbers[randomIndex];
+  };
+  
+  const numbers = [1, 2, 3, 4, 5];
+  const [y] = numbers;
+  
+  // @ts-ignore
+  const dataVocabulary = vocabulary[selectVocabulary]
+  
+  const handleClick = () => {
+    if(indexWord === null) return
+    
+    const isArrayAnswers = Array.isArray(answers[indexWord])
+    
+    const isTrueAnswer = isArrayAnswers
+      ? (answers[indexWord] as unknown as string[]).find(ans => ans.toLowerCase().trim() === answer.toLowerCase().trim())
+      : answers[indexWord].toLowerCase().trim() === answer.toLowerCase().trim()
+    
+    if(isTrueAnswer){
+      setResult(prevState => prevState + 1)
+    } else {
+      setErrorWord((prevState) => [...prevState, { [questions[indexWord]]: ` ${answers[indexWord]} / ${answer}` }])
+    }
+    setAnswer('')
+    setLastWord(prevState => prevState - 1)
+    
+    let index = getRandomNumber(questions.length - 1, arrayGenerated)
+    if(index !== null){
+      setIndexWord(index)
+      // @ts-ignore
+      setArrayGenerated(prevState => [...prevState, index])
+      setActualQuestions(questions[index])
+    }
+  }
+  
+  const handleStart = () => {
+    setIsStart(true)
+    setResult(0)
+    let index = getRandomNumber(questions.length - 1, arrayGenerated)
+    if(index !== null){
+      setIndexWord(index)
+      // @ts-ignore
+      setArrayGenerated(prevState => [...prevState, index])
+      setActualQuestions(questions[index])
+    }
+  }
+  
+  const handleStop = () => {
+    setIsStart(false)
+    setActualQuestions('')
+    setIndexWord(0)
+    setLastWord(Object.values(dataVocabulary).length)
+    setArrayGenerated([])
+    setErrorWord([])
+  }
+  
+  useEffect(() => {
+    setQuestions(language === LanguageEnum.ru
+      ? Object.keys(dataVocabulary)
+      : Object.values(dataVocabulary))
+    setAnswers(language === LanguageEnum.ru
+      ? Object.values(dataVocabulary)
+      : Object.keys(dataVocabulary))
+    setLastWord(Object.values(dataVocabulary).length)
+  }, [language, dataVocabulary])
+  
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      <Container
+        maxWidth={"full"}
+        minH={"75vh"}
+        bgColor={"orange"}
+        justifyContent={'end'}
+        borderRadius={'50px'}
+      >
+        <HStack m={5}>
+          <HStack w={'70%'} justifyContent={'center'}>
+            <Heading as='h2' size='md'>
+              Набрано балов: {result} из {questions.length}
+            </Heading>
+            <Heading as='h2' size='md'>
+              осталось слов: {lastWord}
+            </Heading>
+          </HStack>
+          <VStack spacing={5} p={5} border={'2px solid black'} borderRadius={'50px'} bgColor={'red.300'}>
+            <Heading as='h2' size='md'>
+              Язык ввода
+            </Heading>
+            <Select
+              isDisabled={isStart}
+              w={"md"}
+              value={language}
+              onChange={e => setLanguage(e.target.value as LanguageEnum)}
+            >
+                  <option value={'ru'}>Русский</option>
+                  <option value={'en'}>Английский</option>
+            </Select>
+            <Heading as='h2' size='md'>
+              Выбери нужный Вариант практики
+            </Heading>
+            <Select
+              isDisabled={isStart}
+              w={"md"}
+              value={selectVocabulary}
+              onChange={e => setSelectVocabulary(e.target.value)}
+            >
+              {
+                Object.keys(vocabulary).map(vocal => (
+                  <option key={vocal} value={vocal}>{vocal}</option>
+                ))
+              }
+            </Select>
+            <Button
+              bg={'blue'}
+              border={'2px solid blue'}
+              colorScheme='blue'
+              color={'black'}
+              onClick={isStart ? handleStop : handleStart}
+            >
+              {isStart ? 'Стоп' : 'Cтарт'}
+            </Button>
+          </VStack>
+        </HStack>
+        {isStart && lastWord !== 0 && <VStack spacing={5}>
+         <Timer isStart={isStart}/>
+          <Heading as='h2' size='md'>
+            Переведите слово: <Text color={'blue'} as={'span'}>{Array.isArray(actualQuestions) ? actualQuestions.join(' / ') : actualQuestions}</Text>
+          </Heading>
+          <Input
+            borderColor={'black'}
+            bgColor={'gray.400'}
+            width={'xs'}
+            onChange={e => setAnswer(e.target.value)}
+            value={answer}
+            isDisabled={lastWord === 0}
+            onKeyPress={(event) => {
+              if (event.key === 'Enter'){
+                handleClick()
+              }
+            }}
+          />
+          <Button
+            bg={'blue'}
+            border={'2px solid blue'}
+            colorScheme='blue'
+            color={'black'}
+            onClick={handleClick}
+            isDisabled={lastWord === 0}
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+            Проверить
+          </Button>
+          <Textarea
+            width={'xl'}
+            defaultValue={errorWord.map((item) => {
+              return Object.keys(item).map((key) => `${key}: ${item[key]}`).join('\n');
+            }).join('\n\n')}
+            rows={errorWord.length + 2}
+            mb={5}
+          />
+        </VStack>}
+      </Container>
     </main>
   )
 }
